@@ -122,6 +122,13 @@ nomes_perfis = ["Vulneráveis", "Emergentes", "Consolidados", "Dinâmicos"]
 mapa_nomes = {cluster_idx: nome for i, (cluster_idx, nome) in enumerate(zip(perfil_ordenado.index, nomes_perfis))}
 df_final['perfil'] = df_final['cluster_num'].map(mapa_nomes)
 
+MAPA_CORES = {
+    "Vulneráveis": "#FF4545",
+    "Emergentes": "#00C851",
+    "Consolidados": "#6200EA",
+    "Dinâmicos": "#2979FF"
+    }
+
 print("\nPERFIS IDENTIFICADOS (Médias):")
 print(df_final.groupby('perfil')[indicadores].mean().round(2).sort_values('pib_per_capita'))
 
@@ -130,10 +137,40 @@ print(df_final.groupby('perfil')[indicadores].mean().round(2).sort_values('pib_p
 # ==============================================================================
 print("\n[FASE 5] Gerando e exibindo visualizações...")
 
-df_radar = df_final.groupby('perfil')[indicadores].mean().reset_index()
-df_radar_melted = pd.melt(df_radar, id_vars=['perfil'], var_name='Indicador', value_name='Valor')
-fig_radar = px.line_polar(df_radar_melted, r='Valor', theta='Indicador', color='perfil', line_close=True,
-                          title='Personalidade Média de Cada Perfil', category_orders={'perfil': nomes_perfis})
+print("Gerando Radar Chart com escala ajustada (0-1)...")
+
+from sklearn.preprocessing import MinMaxScaler
+df_radar_raw = df_final.groupby('perfil')[indicadores].mean().reset_index()
+scaler_radar = MinMaxScaler()
+df_radar_scaled = df_radar_raw.copy()
+df_radar_scaled[indicadores] = scaler_radar.fit_transform(df_radar_raw[indicadores])
+df_melted_raw = pd.melt(df_radar_raw, id_vars=['perfil'], var_name='Indicador', value_name='Valor_Real')
+df_melted_scaled = pd.melt(df_radar_scaled, id_vars=['perfil'], var_name='Indicador', value_name='Valor_Escalado')
+df_radar_final = pd.merge(df_melted_scaled, df_melted_raw, on=['perfil', 'Indicador'])
+def formatar_valor(row):
+    val = row['Valor_Real']
+    if row['Indicador'] == 'pib_per_capita':
+        return f"R$ {val:,.2f}"
+    elif row['Indicador'] == 'taxa_alfabetizacao':
+        return f"{val:.1f}%"
+    else:
+        return f"{val:.1f} hab/km²"
+
+df_radar_final['Texto_Hover'] = df_radar_final.apply(formatar_valor, axis=1)
+fig_radar = px.line_polar(
+    df_radar_final, 
+    r='Valor_Escalado',
+    theta='Indicador', 
+    color='perfil', 
+    line_close=True,
+    range_r=[0, 1.05],
+    title='<b>Personalidade dos Perfis (Comparativo Relativo)</b>', 
+    category_orders={'perfil': nomes_perfis},
+    color_discrete_map=MAPA_CORES,
+    hover_name='perfil',
+    hover_data={'Valor_Escalado': False, 'Texto_Hover': True}
+)
+fig_radar.update_traces(fill='toself', hovertemplate='<b>%{theta}</b><br>%{customdata[1]}')
 fig_radar.show()
 
 for indicador in indicadores:
@@ -141,19 +178,43 @@ for indicador in indicadores:
     titulo = f'Distribuição de {indicador.replace("_", " ").title()} por Perfil'
     if is_log:
         titulo += " (Escala Logarítmica)"
-    fig_box = px.box(df_final, x='perfil', y=indicador, color='perfil', title=titulo,
-                     category_orders={'perfil': nomes_perfis}, log_y=is_log)
+    
+    fig_box = px.box(
+        df_final, 
+        x='perfil', 
+        y=indicador, 
+        color='perfil', 
+        title=titulo,
+        category_orders={'perfil': nomes_perfis}, 
+        log_y=is_log,
+        color_discrete_map=MAPA_CORES
+    )
     fig_box.show()
 
 pca = PCA(n_components=2)
 components = pca.fit_transform(df_normalizado)
 df_final['pca1'] = components[:, 0]
 df_final['pca2'] = components[:, 1]
-fig_pca = px.scatter(df_final, x='pca1', y='pca2', color='perfil', hover_data=['municipio', 'pib_per_capita'],
-                     title=f"Segmentação de Municípios via PCA (Silhueta: {silhueta:.2f})")
-fig_pca.add_trace(go.Scatter(x=df_final.iloc[indices_medoides]['pca1'], y=df_final.iloc[indices_medoides]['pca2'], mode='markers+text',
-                             marker=dict(symbol='star', size=15, color='black'),
-                             text=df_final.iloc[indices_medoides]['municipio'], textposition="top center", name='Medóides'))
+
+fig_pca = px.scatter(
+    df_final, 
+    x='pca1', 
+    y='pca2', 
+    color='perfil', 
+    hover_data=['municipio', 'pib_per_capita'],
+    title=f"Segmentação de Municípios via PCA (Silhueta: {silhueta:.2f})",
+    category_orders={'perfil': nomes_perfis},
+    color_discrete_map=MAPA_CORES
+)
+fig_pca.add_trace(go.Scatter(
+    x=df_final.iloc[indices_medoides]['pca1'], 
+    y=df_final.iloc[indices_medoides]['pca2'], 
+    mode='markers+text',
+    marker=dict(symbol='star', size=15, color='black'),
+    text=df_final.iloc[indices_medoides]['municipio'], 
+    textposition="top center", 
+    name='Medóides'
+))
 fig_pca.show()
 
 try:
@@ -161,6 +222,7 @@ try:
     gdf = gpd.read_file(url_geojson)
     gdf['id'] = gdf['id'].astype('int64')
     mapa_final = gdf.merge(df_final, left_on='id', right_on='codigo_ibge', how='inner')
+    
     fig_mapa = px.choropleth_mapbox(
         mapa_final, 
         geojson=mapa_final.geometry, 
@@ -177,11 +239,12 @@ try:
         zoom=3.2, 
         center={"lat": -14.235, "lon": -51.925},
         title="Distribuição Geográfica dos Perfis", 
-        category_orders={'perfil': nomes_perfis}
+        category_orders={'perfil': nomes_perfis},
+        color_discrete_map=MAPA_CORES
     )
     fig_mapa.update_layout(margin={"r":0,"t":40,"l":0,"b":0})
     fig_mapa.show()
-    print("Gráficos exibidos com sucesso.")
+    print("Gráficos exibidos com sucesso e cores atualizadas.")
 except Exception as e:
     print(f"Mapa não pôde ser gerado: {e}.")
 # ==============================================================================
