@@ -1,9 +1,12 @@
 pandas
 numpy
 scikit-learn
+scikit-learn-extra
+mlxtend
 plotly
 geopandas
+requests
+XlsxWriter
 openpyxl
-pyclustering
-ipykernel
-nbformat
+setuptools
+packaging

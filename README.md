@@ -1,78 +1,72 @@
-Este projeto consiste em uma aplicação de Ciência de Dados voltada para a análise de clusters de municípios brasileiros. Utilizando algoritmos de Aprendizado de Máquina Não-Supervisionado (K-Medoids), o sistema agrupa cidades com características similares baseando-se em indicadores oficiais do IBGE.
+# Projeto de Mineracao de Dados - Municipios Brasileiros
 
-O objetivo é identificar padrões regionais e perfis socioeconômicos (ex: Vulneráveis, Emergentes, Consolidados e Dinâmicos) para auxiliar em estudos demográficos ou definição de políticas públicas.
+Este projeto implementa um pipeline completo de Data Mining (KDD) aplicado a dados socioeconomicos de municipios brasileiros. O sistema utiliza algoritmos de aprendizado nao supervisionado para segmentacao (clusterizacao) e mineracao de regras de associacao para descoberta de padroes.
 
-## Fonte dos Dados
+## Descricao Geral
 
-Os dados brutos foram extraídos do SIDRA (Sistema IBGE de Recuperação Automática). Foram utilizadas as seguintes tabelas oficiais:
+O projeto opera em duas fases distintas:
+1. **Clusterizacao (K-Medoids):** Agrupa municipios com caracteristicas similares baseando-se em PIB, Taxa de Alfabetizacao e Densidade Demografica.
+2. **Regras de Associacao (Apriori):** Analisa os clusters gerados para encontrar regras condicionais (ex: Se X entao Y) relacionando UF, perfil economico e indicadores sociais.
 
-*   **Tabela 5938:** Produto Interno Bruto (PIB) a preços correntes (Utilizado para o cálculo do PIB per Capita).
-*   **Tabela 1383:** Taxa de alfabetização das pessoas de 15 anos ou mais de idade (Dados censitários/amostrais).
-*   **Tabela 1301:** Densidade demográfica (Habitantes por km²).
+## Estrutura de Arquivos
 
-## Tecnologias Utilizadas
+Para a execucao correta, o diretorio do projeto deve conter os seguintes arquivos na raiz:
 
-O projeto foi desenvolvido em **Python 3.8+** utilizando as seguintes bibliotecas para manipulação, modelagem e visualização:
+* `mineracao_profissional.py`: Script principal de ETL, pre-processamento e clusterizacao.
+* `associacao_municipios.py`: Script secundario para geracao de regras de associacao.
+* `pib.xlsx`: Dados brutos do PIB (IBGE).
+* `alfabetizacao.xlsx`: Dados brutos de alfabetizacao (IBGE).
+* `densidade.xlsx`: Dados brutos de densidade demografica (IBGE).
+* `requirements.txt`: Lista de dependencias do projeto.
 
-*   **Pandas & NumPy:** Processamento de dados e álgebra linear.
-*   **Scikit-Learn:** Pré-processamento (StandardScaler), redução de dimensionalidade (PCA) e métricas de validação (Silhouette Score, Calinski-Harabasz).
-*   **PyClustering:** Implementação do algoritmo K-Medoids (Partitioning Around Medoids).
-*   **Plotly (Express & Graph Objects):** Visualizações interativas para web e análise exploratória.
-*   **GeoPandas:** Manipulação de dados geoespaciais para plotagem do mapa do Brasil.
+## Pre-requisitos e Instalacao
 
-## Metodologia
+O projeto foi desenvolvido em Python. Recomenda-se o uso de ambiente virtual (venv).
 
-O pipeline de dados segue as etapas descritas abaixo:
-
-1.  **Carga e Limpeza:** Importação dos arquivos Excel oriundos do SIDRA e unificação (merge) através do código do município (Código IBGE).
-2.  **Tratamento de Outliers:** Remoção de dados discrepantes utilizando o método do Intervalo Interquartil (IQR) para evitar distorções na clusterização.
-3.  **Normalização:** Padronização dos dados (Média 0 e Desvio Padrão 1) para garantir que variáveis com grandezas diferentes (ex: PIB vs Taxa de Alfabetização) tenham o mesmo peso no modelo.
-4.  **Definição de K:** Análise de Silhueta para determinar o número ideal de grupos.
-5.  **Modelagem K-Medoids:** Execução do algoritmo utilizando medóides (pontos reais do dataset) como centros, o que oferece maior robustez contra ruídos se comparado ao K-Means.
-6.  **Visualização:** Geração de mapas, gráficos de dispersão (PCA) e radares de perfil.
-
-## Estrutura do Projeto e Execução
-
-Para executar o script corretamente, é necessário manter a estrutura de diretórios abaixo, onde a pasta `dados_brutos` contém os arquivos extraídos do SIDRA.
-
-### Estrutura de Pastas
-
-```
-/
-├── ProjetoIBGE.py
-├── ProjetoIBGE.ipynb
-├── README.md
-└── dados_brutos/
-    ├── pib.xlsx            (Dados da Tabela 5938)
-    ├── alfabetizacao.xlsx  (Dados da Tabela 1383)
-    └── densidade.xlsx      (Dados da Tabela 1301)
-```
-
-### Pré-requisitos
-*   **Python 3.8+** instalado.
-*   Recomenda-se o uso de um ambiente virtual (`venv`) para isolar as dependências.
-
-### 1. Instalação das Dependências
-O projeto conta agora com um arquivo de requisitos otimizado. No terminal, execute:
+1. Instale as dependencias listadas no arquivo requirements.txt:
 
 ```
 pip install -r requirements.txt
 ```
-### 2. Como Rodar
-Você pode executar o projeto de duas formas, dependendo da sua preferência:
-Opção A: Via Script Python (Terminal)
-Ideal para gerar os resultados e visualizações de uma só vez. O navegador abrirá automaticamente com os gráficos.
-```
-python ProjetoIBGE.py
-```
-Opção B: Via Jupyter Notebook (Interativo)
-Ideal para análises exploratórias passo a passo. Se você tiver o Jupyter ou VS Code instalado:
-```
-jupyter notebook ProjetoIBGE.ipynb
-```
 
-Resultados Gerados
-Após a execução, o script exibe visualizações interativas no navegador e cria uma pasta chamada resultados contendo os seguintes arquivos CSV para análise posterior:
-01_dados_completos_segmentacao.csv: Base de dados completa contendo as métricas originais, o cluster atribuído e a identificação se o município é um medóide.
-02_resumo_perfis_medios.csv: Tabela com as médias dos indicadores (PIB, Alfabetização, Densidade) por perfil (cluster).
-03_municipios_representantes.csv: Lista dos municípios medóides, que são os exemplos mais representativos (o centro matemático) de cada perfil.
+Como Executar
+O pipeline deve ser executado sequencialmente.
+Passo 1: Segmentacao e Analise Exploratoria
+Execute o script de mineracao. Este processo carrega os dados brutos, realiza a limpeza, normalizacao (StandardScaler) e aplica o algoritmo K-Medoids.
+```
+python mineracao_profissional.py
+```
+* `resultado_mineracao_municipios.xlsx`: Arquivo Excel contendo a base tratada e a classificacao dos clusters.
+* `0_mapa_brasil_municipios.html`: Mapa interativo do Brasil com a distribuicao dos clusters.
+* `1_mapa_clusters_pca.html`: Visualizacao dos clusters reduzida a 2 dimensoes (PCA).
+* `2_distribuicao_pib.html`: Boxplot da distribuicao de renda por grupo.
+* `3_analise_3d.html`: Grafico tridimensional das variaveis analisadas.
+
+Passo 2: Mineracao de Regras de Associacao
+Apos a geracao do arquivo Excel no passo anterior, execute o script de associacao. Ele le a segmentacao, aplica One-Hot Encoding e executa o algoritmo Apriori.
+```
+python associacao_municipios.py
+```
+Saidas geradas:
+
+* `regras_associacao_municipios.xlsx`: Relatorio contendo as regras encontradas, ordenadas por confianca e lift.
+Metodologia e Parametros
+K-Medoids (Clusterizacao)
+Utilizado em substituicao ao K-Means por ser mais robusto a outliers e utilizar pontos reais (medoides) como centroides.
+* `Metrica de Distancia`: Euclidiana.
+* `Clusters (k)`: 4 grupos definidos apos analise de silhueta.
+* `Features`: Log do PIB, Taxa de Alfabetizacao e Log da Densidade.
+Apriori (Associacao)
+Utilizado para encontrar padroes frequentes entre os atributos categoricos e os clusters definidos.
+* `Suporte Minimo`: 0.05 (5%)
+* `Confianca Minima`: 0.7 (70%)
+* `Lift Minimo`: 1.0
+Dependencias Principais
+* `pandas`
+* `numpy`
+* `scikit-learn`
+* `scikit-learn-extra (Implementacao do K-Medoids)`
+* `mlxtend (Implementacao do Apriori)`
+* `plotly (Visualizacao de dados)`
+* `geopandas (Manipulacao geoespacial)`
+* `XlsxWriter (Exportacao de relatorios)`
