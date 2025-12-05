@@ -61,7 +61,7 @@ Utilizado para encontrar padroes frequentes entre os atributos categoricos e os 
 * `Suporte Minimo`: 0.05 (5%)
 * `Confianca Minima`: 0.7 (70%)
 * `Lift Minimo`: 1.0
-Dependencias Principais
+## Dependencias Principais
 * `pandas`
 * `numpy`
 * `scikit-learn`
